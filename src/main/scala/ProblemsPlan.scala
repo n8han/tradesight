@@ -16,15 +16,19 @@ object ProblemsPlan {
     unfiltered.filter.Planify {
       case GET(Path("/weighted")) =>
         val stream = 
-          NamedStream("PLEASE IMPLEMENT ME",
+          NamedStream("equal weighted portfolio",
             weightedReturns(streamMap).map(dataPoint)
         )
         Json(anyJson(stream :: Nil))
     }
 
-  def weightedReturns(streamMap: ReturnsIndex): SortedMap[DateTime, Double] =
-    (0 to 99).foldLeft(SortedMap.empty[DateTime, Double]) { (acc, i) =>
-      acc + (DateTime.now -> .1d)
+  def weightedReturns(streamMap: ReturnsIndex):
+  SortedMap[DateTime, Double] = {
+    val interesting = for (vls <- streamMap.values; vl <- vls) yield vl
+    (SortedMap.empty[DateTime, Double] /: interesting) {
+      case (acc, (date, db)) =>
+        acc + (date -> (acc.get(date).getOrElse(0.0) + db))
     }
+  }
 
 }
