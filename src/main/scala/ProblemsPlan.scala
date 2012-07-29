@@ -15,11 +15,16 @@ object ProblemsPlan {
   def apply(streamMap: ReturnsIndex) =
     unfiltered.filter.Planify {
       case GET(Path("/weighted")) =>
-        val stream = 
+        val weightedMap = weightedReturns(streamMap)
+        val weighted = 
           NamedStream("equal weighted portfolio",
-            weightedReturns(streamMap).map(dataPoint)
+            weightedMap.map(dataPoint)
         )
-        Json(anyJson(stream :: Nil))
+        val cumulative =
+          NamedStream("cumulative returns",
+            cumulativeReturns(weightedMap).map(dataPoint)
+        )
+        Json(anyJson(weighted :: cumulative :: Nil))
     }
 
   def weightedReturns(streamMap: ReturnsIndex):
@@ -28,6 +33,15 @@ object ProblemsPlan {
     (SortedMap.empty[DateTime, Double] /: interesting) {
       case (acc, (date, db)) =>
         acc + (date -> (acc.get(date).getOrElse(0.0) + db))
+    }
+  }
+  def cumulativeReturns(weightedMap: SortedMap[DateTime, Double]):
+  SortedMap[DateTime, Double] = {
+    (SortedMap.empty[DateTime, Double] /: weightedMap) {
+      case (acc, (date, db)) =>
+        acc + (date -> (
+          (for ((dt, vl) <- acc.lastOption) yield vl).getOrElse(0.0) +
+            db))
     }
   }
 
