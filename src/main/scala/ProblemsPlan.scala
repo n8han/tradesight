@@ -25,9 +25,17 @@ object ProblemsPlan {
           NamedStream("cumulative returns",
             cumMap.map(dataPoint)
         )
+        
         val ds = deltas(cumMap)
         println("best " + ds.maxBy { _.change })
         println("worst " + ds.minBy { _.change })
+
+        for ((name, mp) <- streamMap) {
+          println("-- %s --".format(name))
+          val aDelta = deltas(cumulativeReturns(mp))
+          println("best " + ds.maxBy { _.change })
+          println("worst " + ds.minBy { _.change })
+        }
         Json(anyJson(weighted :: cumulative :: Nil))
     }
   }
