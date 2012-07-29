@@ -12,7 +12,7 @@ import collection.SortedMap
  *   type ReturnsIndex = Map[String, collection.SortedMap[org.joda.time.DateTime, Double]]
  */
 object ProblemsPlan {
-  def apply(streamMap: ReturnsIndex) =
+  def apply(streamMap: ReturnsIndex) = {
     unfiltered.filter.Planify {
       case GET(Path("/weighted")) =>
         val weightedMap = weightedReturns(streamMap)
@@ -20,12 +20,17 @@ object ProblemsPlan {
           NamedStream("equal weighted portfolio",
             weightedMap.map(dataPoint)
         )
+        val cumMap = cumulativeReturns(weightedMap)
         val cumulative =
           NamedStream("cumulative returns",
-            cumulativeReturns(weightedMap).map(dataPoint)
+            cumMap.map(dataPoint)
         )
+        val ds = deltas(cumMap)
+        println("best " + ds.maxBy { _.change })
+        println("worst " + ds.minBy { _.change })
         Json(anyJson(weighted :: cumulative :: Nil))
     }
+  }
 
   def weightedReturns(streamMap: ReturnsIndex):
   SortedMap[DateTime, Double] = {
@@ -44,5 +49,13 @@ object ProblemsPlan {
             db))
     }
   }
-
+  def deltas(cumMap: SortedMap[DateTime, Double]) = {
+    for {
+      start <- cumMap.keys
+      end <- cumMap.keys if end.isAfter(start)
+    } yield {
+      Range(start, end, cumMap(end) - cumMap(start))
+    }
+  }
 }
+case class Range(start: DateTime, end: DateTime, change: Double)
